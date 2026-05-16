@@ -8,6 +8,7 @@ import {ProtocolGovernor} from "../src/governance/ProtocolGovernor.sol";
 import {GovernanceBadge} from "../src/tokens/GovernanceBadge.sol";
 import {AMMFactory} from "../src/core/AMMFactory.sol";
 import {YieldVault} from "../src/tokens/YieldVault.sol";
+import {PriceOracle} from "../src/oracles/PriceOracle.sol";
 
 /**
  * @title VerifyDeploymentScript
@@ -26,6 +27,7 @@ contract VerifyDeploymentScript is Script {
         address timelockAddr = vm.envOr("TIMELOCK", address(0));
         address governorAddr = vm.envOr("GOVERNOR", address(0));
         address badgeAddr = vm.envOr("GOV_BADGE", address(0));
+        address priceOracleAddr = vm.envOr("PRICE_ORACLE", address(0));
         address deployerAddr = vm.envOr("DEPLOYER", address(0));
 
         if (govTokenAddr == address(0) || timelockAddr == address(0) || governorAddr == address(0) || badgeAddr == address(0)) {
@@ -100,6 +102,24 @@ contract VerifyDeploymentScript is Script {
             revert StateVerificationFailed("Timelock admin role management is not self-contained");
         }
         console2.log("    - Self-contained administration role structure: OK");
+
+        // 6. Verify PriceOracle if address provided
+        if (priceOracleAddr != address(0)) {
+            console2.log("[+] Verifying PriceOracle...");
+            PriceOracle oracle = PriceOracle(priceOracleAddr);
+            
+            address oracleOwner = oracle.owner();
+            if (oracleOwner == address(0)) {
+                revert StateVerificationFailed("PriceOracle has no owner - not initialized");
+            }
+            
+            uint256 threshold = oracle.maxStalenessThreshold();
+            if (threshold == 0) {
+                revert StateVerificationFailed("PriceOracle staleness threshold not set");
+            }
+            console2.log("    - PriceOracle staleness threshold:", threshold);
+            console2.log("    - PriceOracle initialization: OK");
+        }
 
         console2.log("=== SECURE DEPLOYMENT VERIFIED SUCCESSFULLY ===");
     }
