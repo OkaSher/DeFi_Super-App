@@ -32,7 +32,7 @@ interface IOracle {
 
     /// @notice Validate that a price is not stale
     /// @param updatedAt The timestamp when the price was last updated
-    /// @param maxAge The maximum acceptable age of the price in seconds
+    /// @param maxAge The maximum acceptable age in seconds
     /// @dev Reverts with PriceStale if (block.timestamp - updatedAt) > maxAge
-    function validatePriceFreshness(uint256 updatedAt, uint256 maxAge) external pure;
+    function validatePriceFreshness(uint256 updatedAt, uint256 maxAge) external view;
 }
