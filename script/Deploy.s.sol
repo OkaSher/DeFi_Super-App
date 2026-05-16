@@ -2,14 +2,17 @@
 pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
 import {GovToken} from "../src/tokens/GovToken.sol";
 import {ProtocolTimelock} from "../src/governance/ProtocolTimelock.sol";
 import {ProtocolGovernor} from "../src/governance/ProtocolGovernor.sol";
 import {GovernanceBadge} from "../src/tokens/GovernanceBadge.sol";
 import {AMMFactory} from "../src/core/AMMFactory.sol";
 import {YieldVault} from "../src/tokens/YieldVault.sol";
+import {PriceOracle} from "../src/oracles/PriceOracle.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeployScript is Script {
     function run() external {
@@ -42,9 +45,24 @@ contract DeployScript is Script {
         new AMMFactory();
 
         // 6. Deploy YieldVault wrapping the GovToken
-        new YieldVault(IERC20(address(govToken)), "Yield Vault", "yGOV");
+        YieldVault vault = new YieldVault(IERC20(address(govToken)), "Yield Vault", "yGOV");
+
+        // 7. Deploy PriceOracle with UUPS proxy pattern
+        {
+            // Deploy implementation
+            PriceOracle oracleImpl = new PriceOracle();
+
+            // Deploy proxy with initialization
+            bytes memory initData = abi.encodeCall(PriceOracle.initialize, (deployer));
+            ERC1967Proxy oracleProxy = new ERC1967Proxy(address(oracleImpl), initData);
+
+            // Set maxStalenessThreshold through proxy
+            PriceOracle oracle = PriceOracle(address(oracleProxy));
+            oracle.setMaxStalenessThreshold(3600); // 1 hour default
+        }
 
         // 7. Secure Roles (scoped block to avoid Stack Too Deep)
+        // 8. Secure Roles (scoped block to avoid Stack Too Deep)
         {
             // Grant governor proposer and canceller privileges
             timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
