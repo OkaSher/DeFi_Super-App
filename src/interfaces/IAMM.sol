@@ -33,6 +33,7 @@ interface IAMM {
     error InsufficientShares(uint256 requested, uint256 available);
     error NoLiquidity();
     error InvalidTokenOrder();
+    error Overflow();
 
     function token0() external view returns (address);
 
