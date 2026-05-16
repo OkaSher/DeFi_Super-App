@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-/// @title  IAMM — Interface for the x*y=k Automated Market Maker pool
-/// @notice All external consumers (factory, tests, frontend adapters)
-///         interact with pools exclusively through this interface.
+/// @title  IAMM — Interface for the constant-product AMM pool
 interface IAMM {
     event LiquidityAdded(
         address indexed provider,
@@ -34,6 +32,11 @@ interface IAMM {
     error NoLiquidity();
     error InvalidTokenOrder();
     error Overflow();
+    error IdenticalAddresses();
+    error AlreadyInitialized();
+    error Unauthorized();
+
+    function initialize(address _token0, address _token1) external;
 
     function token0() external view returns (address);
 
