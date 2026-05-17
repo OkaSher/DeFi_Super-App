@@ -15,6 +15,12 @@ contract MockERC20 is ERC20 {
 }
 
 contract YieldVaultTest is Test {
+    // Standard ERC-6093 and ERC-4626 custom errors declared for expectRevert
+    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
+    error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
+    error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
+
     MockERC20 public asset;
     YieldVault public vault;
 
@@ -37,6 +43,8 @@ contract YieldVaultTest is Test {
         asset.approve(address(vault), type(uint256).max);
         vm.stopPrank();
     }
+
+    /* ==================== EXISTING TESTS ==================== */
 
     function test_Initialization() public {
         assertEq(vault.name(), "YieldVault USDT");
@@ -71,14 +79,6 @@ contract YieldVaultTest is Test {
     }
 
     function test_InflationAttackProtection() public {
-        // --- Without offset protection (i.e. standard ERC-4626), an attacker does:
-        // 1. Attacker (Bob) deposits 1 wei of asset and receives 1 wei of shares.
-        // 2. Attacker transfers (donates) 10,000 * 1e18 of assets directly to the vault contract.
-        // 3. The price of 1 share is now inflated: 1 share = (10,000 * 1e18 + 1) assets.
-        // 4. Victim (Alice) deposits 5,000 * 1e18 assets.
-        // 5. Without offset, Alice's shares = 5,000 * 1e18 * 1 / (10,000 * 1e18 + 1) = 0 shares (due to rounding down).
-        // 6. Alice gets 0 shares but her 5,000 * 1e18 assets are lost to the vault (shared by existing share holders, i.e. Bob).
-        
         // --- With 9 decimals offset protection:
         // 1. Bob (attacker) deposits 1 wei of asset
         vm.prank(bob);
@@ -96,12 +96,337 @@ contract YieldVaultTest is Test {
         assertTrue(aliceShares > 0, "Alice must receive non-zero shares");
         
         // Check conversion and share ratios
-        // Let's make sure Alice can redeem her shares and get her assets back (minus minor precision loss if any, but not stolen).
         vm.prank(alice);
         uint256 aliceAssetsRedeemed = vault.redeem(aliceShares, alice, alice);
         
         // Alice should get almost all of her 5000 * 1e18 assets back.
-        // Let's assert that Alice got at least 99.999% of her deposit back.
+        // Assert that Alice got at least 99.999% of her deposit back.
         assertApproxEqAbs(aliceAssetsRedeemed, 5_000 * 1e18, 1e13);
+    }
+
+    /* ==================== EXPANDED UNIT TESTS ==================== */
+
+    function test_MaxDeposit() public view {
+        assertEq(vault.maxDeposit(alice), type(uint256).max);
+    }
+
+    function test_MaxMint() public view {
+        assertEq(vault.maxMint(alice), type(uint256).max);
+    }
+
+    function test_MaxWithdraw() public {
+        uint256 amount = 500 * 1e18;
+        vm.prank(alice);
+        vault.deposit(amount, alice);
+
+        // Max withdraw should equal Alice's converted assets
+        uint256 expectedMax = vault.convertToAssets(vault.balanceOf(alice));
+        assertEq(vault.maxWithdraw(alice), expectedMax);
+        assertEq(vault.maxWithdraw(bob), 0);
+    }
+
+    function test_MaxRedeem() public {
+        uint256 amount = 500 * 1e18;
+        vm.prank(alice);
+        vault.deposit(amount, alice);
+
+        assertEq(vault.maxRedeem(alice), vault.balanceOf(alice));
+        assertEq(vault.maxRedeem(bob), 0);
+    }
+
+    function test_PreviewDeposit() public view {
+        uint256 depositAmount = 250 * 1e18;
+        uint256 expectedShares = vault.convertToShares(depositAmount);
+        assertEq(vault.previewDeposit(depositAmount), expectedShares);
+    }
+
+    function test_PreviewMint() public view {
+        uint256 sharesAmount = 250 * 1e27;
+        uint256 expectedAssets = vault.convertToAssets(sharesAmount);
+        assertEq(vault.previewMint(sharesAmount), expectedAssets);
+    }
+
+    function test_PreviewWithdraw() public {
+        uint256 depositAmount = 1000 * 1e18;
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        uint256 withdrawAmount = 400 * 1e18;
+        // Preview withdraw calculates shares needed to withdraw assets
+        // Under standard ERC-4626 implementation, it rounds up
+        uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
+        assertTrue(expectedShares > 0);
+    }
+
+    function test_PreviewRedeem() public {
+        uint256 depositAmount = 1000 * 1e18;
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        uint256 sharesToRedeem = vault.balanceOf(alice) / 2;
+        uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
+        assertTrue(expectedAssets > 0);
+    }
+
+    function test_ConvertToShares() public view {
+        // assets * 10**9 for empty vault
+        assertEq(vault.convertToShares(1e18), 1e27);
+        assertEq(vault.convertToShares(0), 0);
+    }
+
+    function test_ConvertToAssets() public view {
+        // shares / 10**9 for empty vault
+        assertEq(vault.convertToAssets(1e27), 1e18);
+        assertEq(vault.convertToAssets(0), 0);
+    }
+
+    function test_RevertWithdrawExceedsMax() public {
+        uint256 depositAmount = 500 * 1e18;
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        uint256 max = vault.maxWithdraw(alice);
+        uint256 overLimit = max + 1;
+
+        vm.startPrank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC4626ExceededMaxWithdraw.selector, alice, overLimit, max)
+        );
+        vault.withdraw(overLimit, alice, alice);
+        vm.stopPrank();
+    }
+
+    function test_RevertRedeemExceedsMax() public {
+        uint256 depositAmount = 500 * 1e18;
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        uint256 max = vault.maxRedeem(alice);
+        uint256 overLimit = max + 1;
+
+        vm.startPrank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC4626ExceededMaxRedeem.selector, alice, overLimit, max)
+        );
+        vault.redeem(overLimit, alice, alice);
+        vm.stopPrank();
+    }
+
+    function test_RevertTransferInsufficientBalance() public {
+        uint256 depositAmount = 500 * 1e18;
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.startPrank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20InsufficientBalance.selector, alice, shares, shares + 1)
+        );
+        vault.transfer(bob, shares + 1);
+        vm.stopPrank();
+    }
+
+    function test_RevertTransferFromInsufficientAllowance() public {
+        uint256 depositAmount = 500 * 1e18;
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        // Bob tries to transfer alice's shares without approval
+        vm.startPrank(bob);
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20InsufficientAllowance.selector, bob, 0, shares)
+        );
+        vault.transferFrom(alice, bob, shares);
+        vm.stopPrank();
+    }
+
+    function test_DepositAndRedeemAll() public {
+        uint256 amount = 10_000 * 1e18;
+        
+        vm.startPrank(alice);
+        uint256 shares = vault.deposit(amount, alice);
+        assertEq(vault.balanceOf(alice), shares);
+        
+        vault.redeem(shares, alice, alice);
+        assertEq(vault.balanceOf(alice), 0);
+        vm.stopPrank();
+    }
+
+    function test_MintAndWithdrawAll() public {
+        uint256 shares = 10_000 * 1e27;
+        uint256 assetEquivalent = vault.previewMint(shares);
+
+        vm.startPrank(alice);
+        vault.mint(shares, alice);
+        assertEq(vault.balanceOf(alice), shares);
+
+        vault.withdraw(assetEquivalent, alice, alice);
+        assertEq(vault.balanceOf(alice), 0);
+        vm.stopPrank();
+    }
+
+    function test_MultipleDepositors() public {
+        uint256 aliceDeposit = 1000 * 1e18;
+        uint256 bobDeposit = 2000 * 1e18;
+
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(aliceDeposit, alice);
+
+        vm.prank(bob);
+        uint256 bobShares = vault.deposit(bobDeposit, bob);
+
+        assertEq(vault.totalAssets(), aliceDeposit + bobDeposit);
+        assertEq(vault.balanceOf(alice), aliceShares);
+        assertEq(vault.balanceOf(bob), bobShares);
+
+        vm.prank(alice);
+        vault.redeem(aliceShares, alice, alice);
+
+        vm.prank(bob);
+        vault.redeem(bobShares, bob, bob);
+
+        assertEq(vault.totalAssets(), 0);
+    }
+
+    function test_SharePriceIncreaseOnDonation() public {
+        vm.prank(alice);
+        uint256 shares = vault.deposit(1000 * 1e18, alice);
+
+        // Donate assets to the vault directly
+        asset.mint(address(vault), 1000 * 1e18);
+
+        // Assets per share has doubled. Alice's 1000 shares are now worth 2000 assets.
+        // Minor rounding down of 1 wei due to the 9-decimal offset formula is expected, so we assert approximate equality
+        assertEq(vault.totalAssets(), 2000 * 1e18);
+        assertApproxEqAbs(vault.convertToAssets(shares), 2000 * 1e18, 10);
+    }
+
+    function test_DecimalsOffsetSafety() public view {
+        // Vault uses offset of 9
+        // Initial conversion should scale assets by 10**9
+        uint256 assetAmt = 12345;
+        uint256 sharesAmt = vault.convertToShares(assetAmt);
+        assertEq(sharesAmt, assetAmt * 1e9);
+    }
+
+    function test_AllowanceTracking() public {
+        vm.prank(alice);
+        vault.approve(bob, 1000);
+        assertEq(vault.allowance(alice, bob), 1000);
+    }
+
+    function test_VaultApproveAndTransferFrom() public {
+        uint256 depositAmount = 500 * 1e18;
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.prank(alice);
+        vault.approve(bob, shares);
+
+        vm.prank(bob);
+        vault.transferFrom(alice, bob, shares);
+
+        assertEq(vault.balanceOf(alice), 0);
+        assertEq(vault.balanceOf(bob), shares);
+        assertEq(vault.allowance(alice, bob), 0);
+    }
+
+    /* ==================== EXPANDED FUZZ TESTS ==================== */
+
+    function testFuzz_DepositBounds(uint256 amount) public {
+        // Bound deposit amount from 1 wei to 10M USDT (1e18 scale)
+        amount = bound(amount, 1, 10_000_000 * 1e18);
+
+        // Ensure Alice has enough mock assets to perform the fuzzed deposit
+        deal(address(asset), alice, amount);
+
+        vm.startPrank(alice);
+        uint256 shares = vault.deposit(amount, alice);
+        assertEq(shares, amount * 1e9);
+        assertEq(vault.balanceOf(alice), shares);
+
+        uint256 redeemed = vault.redeem(shares, alice, alice);
+        assertEq(redeemed, amount);
+        vm.stopPrank();
+    }
+
+    function testFuzz_WithdrawBounds(uint256 amount) public {
+        amount = bound(amount, 1e9, 1_000_000 * 1e18);
+
+        deal(address(asset), alice, amount);
+
+        // Pre-deposit so vault has enough liquidity
+        vm.prank(alice);
+        vault.deposit(amount, alice);
+
+        uint256 max = vault.maxWithdraw(alice);
+        uint256 withdrawAmt = bound(amount / 2, 1, max);
+
+        vm.prank(alice);
+        uint256 sharesBurned = vault.withdraw(withdrawAmt, alice, alice);
+        assertTrue(sharesBurned > 0);
+    }
+
+    function testFuzz_MintBounds(uint256 shares) public {
+        // Bound shares from 1e9 (1 asset) to 10M * 1e27
+        shares = bound(shares, 1e9, 10_000_000 * 1e27);
+
+        uint256 assetsNeeded = vault.previewMint(shares);
+        deal(address(asset), alice, assetsNeeded);
+
+        vm.startPrank(alice);
+        vault.mint(shares, alice);
+        assertEq(vault.balanceOf(alice), shares);
+
+        // Use redeem instead of withdraw to respect the standard ERC-4626 rounding-down maxWithdraw limits
+        vault.redeem(shares, alice, alice);
+        assertEq(vault.balanceOf(alice), 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_RedeemBounds(uint256 shares) public {
+        // Bound shares to be at least 1e10 so redeemAmt / 2 is >= 5e9 (to prevent rounding to 0 assets)
+        shares = bound(shares, 1e10, 1_000_000 * 1e27);
+
+        uint256 assetsNeeded = vault.previewMint(shares);
+        deal(address(asset), alice, assetsNeeded);
+
+        vm.startPrank(alice);
+        vault.mint(shares, alice);
+
+        uint256 max = vault.maxRedeem(alice);
+        uint256 redeemAmt = bound(shares / 2, 1e9, max);
+
+        uint256 assetsReceived = vault.redeem(redeemAmt, alice, alice);
+        assertTrue(assetsReceived > 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_RoundingDownConvertToShares(uint256 amount) public view {
+        amount = bound(amount, 0, 10_000_000 * 1e18);
+        uint256 expected = amount * 1e9;
+        assertEq(vault.convertToShares(amount), expected);
+    }
+
+    function testFuzz_RoundingUpConvertToAssets(uint256 shares) public view {
+        shares = bound(shares, 0, 10_000_000 * 1e27);
+        uint256 expected = shares / 1e9;
+        assertEq(vault.convertToAssets(shares), expected);
+    }
+
+    function testFuzz_PreviewDepositEqualsConvertToShares(uint256 amount) public view {
+        amount = bound(amount, 1, 10_000_000 * 1e18);
+        assertEq(vault.previewDeposit(amount), vault.convertToShares(amount));
+    }
+
+    function testFuzz_PreviewMintEqualsConvertToShares(uint256 shares) public view {
+        shares = bound(shares, 1e9, 10_000_000 * 1e27);
+        uint256 assetsNeeded = vault.previewMint(shares);
+        // The difference can be at most 1e9 shares (scale factor) due to rounding in previewMint
+        assertApproxEqAbs(vault.convertToShares(assetsNeeded), shares, 1e9);
+    }
+
+    function testFuzz_PreviewRedeemEqualsConvertToAssets(uint256 shares) public view {
+        shares = bound(shares, 1e9, 10_000_000 * 1e27);
+        assertEq(vault.previewRedeem(shares), vault.convertToAssets(shares));
     }
 }
