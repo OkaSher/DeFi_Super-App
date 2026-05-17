@@ -48,6 +48,7 @@ contract ForkTest is Test {
     function setUp() public {
         // This would be called on a fork of Arbitrum Sepolia
         // Fork URL should be set via env: ARBITRUM_SEPOLIA_RPC_URL
+        vm.warp(1 days);
 
         // Deploy governance token
         govToken = new GovToken(1_000_000 * 1e18);
@@ -65,11 +66,6 @@ contract ForkTest is Test {
             10_000 * 1e18 // 10k threshold
         );
 
-        // Setup timelock roles
-        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
-        timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
-        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
-
         // Deploy AMM factory
         factory = new AMMFactory();
 
@@ -82,8 +78,14 @@ contract ForkTest is Test {
             bytes memory initData = abi.encodeCall(PriceOracle.initialize, (deployer));
             ERC1967Proxy oracleProxy = new ERC1967Proxy(address(oracleImpl), initData);
             oracle = PriceOracle(address(oracleProxy));
-            oracle.setMaxStalenessThreshold(3600); // 1 hour
         }
+
+        vm.startPrank(deployer);
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+        timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
+        oracle.setMaxStalenessThreshold(3600); // 1 hour
+        vm.stopPrank();
 
         // Deploy mock tokens for AMM testing
         token0 = new MockERC20("Token0", "T0");
@@ -185,9 +187,7 @@ contract ForkTest is Test {
         // Act & Assert: Non-owner cannot upgrade
         vm.prank(alice); // Not the owner
         vm.expectRevert();
-        // Note: Directly testing _authorizeUpgrade via proxy would require
-        // implementing an upgrade mechanism through the Governor
-        // This test confirms UUPS pattern is in place
+        oracle.upgradeToAndCall(address(newImpl), "");
 
         console2.log("Oracle upgrade authorization requires owner - correctly protected");
     }
