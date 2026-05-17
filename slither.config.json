@@ -1,5 +1,8 @@
 {
-	"filter_paths": "lib|frontend|subgraph|out|cache|broadcast",
+	"filter_paths": "lib|frontend|subgraph|out|cache|broadcast|test|script",
+	"exclude_informational": true,
+	"exclude_low": true,
+	"exclude_dependencies": true,
 	"solc_remaps": [
 		"@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
 		"@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
