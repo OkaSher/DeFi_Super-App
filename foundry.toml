@@ -7,15 +7,13 @@ script  = "script"
 
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
     "forge-std/=lib/forge-std/src/"
 ]
 
-# Optimizer: 200 runs balances deployment cost vs. per-call gas.
 optimizer        = true
 optimizer_runs   = 200
-
-# via-ir enables cross-boundary inlining; enable once all code compiles.
-via_ir = false
+via_ir           = false
 
 [profile.default.fuzz]
 runs = 2000
