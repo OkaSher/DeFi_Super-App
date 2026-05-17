@@ -1,0 +1,14 @@
+{
+  "name": "defi-super-app-subgraph",
+  "version": "1.0.0",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "^0.30.0"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.50.0"
+  }
+}
