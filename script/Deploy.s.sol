@@ -21,60 +21,48 @@ contract DeployScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy Core Governance Token
         GovToken govToken = new GovToken(1_000_000 * 1e18);
 
-        // 2. Deploy ProtocolTimelock (2 days delay)
         address[] memory tempArray = new address[](0);
         ProtocolTimelock timelock = new ProtocolTimelock(2 days, tempArray, tempArray, deployer);
 
-        // 3. Deploy ProtocolGovernor
         ProtocolGovernor governor = new ProtocolGovernor(
             IVotes(address(govToken)),
             timelock,
-            7200,      // ~1 day delay
-            50400,     // ~7 days period
-            10_000 * 1e18 // 10k threshold
+            7200,
+            50_400,
+            10_000 * 1e18
         );
 
-        // 4. Deploy Badge ERC-721 and transfer ownership to the Timelock
         GovernanceBadge badge = new GovernanceBadge(address(governor), address(timelock));
         badge.transferOwnership(address(timelock));
 
-        // 5. Deploy Core AMM Pool Factory
-        new AMMFactory();
+        AMMFactory factory = new AMMFactory();
 
-        // 6. Deploy YieldVault wrapping the GovToken
         YieldVault vault = new YieldVault(IERC20(address(govToken)), "Yield Vault", "yGOV");
 
-        // 7. Deploy PriceOracle with UUPS proxy pattern
-        {
-            // Deploy implementation
-            PriceOracle oracleImpl = new PriceOracle();
+        PriceOracle oracleImpl = new PriceOracle();
+        bytes memory initData = abi.encodeCall(PriceOracle.initialize, (deployer));
+        ERC1967Proxy oracleProxy = new ERC1967Proxy(address(oracleImpl), initData);
+        PriceOracle oracle = PriceOracle(address(oracleProxy));
+        oracle.setMaxStalenessThreshold(3600);
 
-            // Deploy proxy with initialization
-            bytes memory initData = abi.encodeCall(PriceOracle.initialize, (deployer));
-            ERC1967Proxy oracleProxy = new ERC1967Proxy(address(oracleImpl), initData);
-
-            // Set maxStalenessThreshold through proxy
-            PriceOracle oracle = PriceOracle(address(oracleProxy));
-            oracle.setMaxStalenessThreshold(3600); // 1 hour default
-        }
-
-        // 7. Secure Roles (scoped block to avoid Stack Too Deep)
-        // 8. Secure Roles (scoped block to avoid Stack Too Deep)
-        {
-            // Grant governor proposer and canceller privileges
-            timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
-            timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
-
-            // Allow public execution of mature proposals
-            timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
-
-            // Revoke deployer admin privileges, locking down the Timelock
-            timelock.revokeRole(timelock.DEFAULT_ADMIN_ROLE(), deployer);
-        }
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+        timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
+        timelock.revokeRole(timelock.DEFAULT_ADMIN_ROLE(), deployer);
 
         vm.stopBroadcast();
+
+        console2.log("=== Deployment complete (Arbitrum Sepolia target) ===");
+        console2.log("GOV_TOKEN:", address(govToken));
+        console2.log("TIMELOCK:", address(timelock));
+        console2.log("GOVERNOR:", address(governor));
+        console2.log("GOV_BADGE:", address(badge));
+        console2.log("AMM_FACTORY:", address(factory));
+        console2.log("YIELD_VAULT:", address(vault));
+        console2.log("PRICE_ORACLE:", address(oracle));
+        console2.log("PRICE_ORACLE_IMPL:", address(oracleImpl));
+        console2.log("DEPLOYER:", deployer);
     }
 }
