@@ -4,7 +4,20 @@ build/
 out/
 
 cache/
-/out/
+
+# Foundry build artifacts
+out/
+out/build-info/
+
+# Python virtual environments
+.venv/
+frontend/.venv/
+
+# Frontend artifacts
+frontend/node_modules/
+frontend/dist/
+
+# Misc
 
 .env
 .env.*
