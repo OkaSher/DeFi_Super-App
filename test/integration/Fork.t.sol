@@ -13,6 +13,7 @@ import {ProtocolTimelock} from "../../src/governance/ProtocolTimelock.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {MockAggregatorV3} from "../mocks/MockAggregatorV3.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
@@ -110,42 +111,41 @@ contract ForkTest is Test {
 
     // ============ Fork Tests ============
 
-    /// @notice Test AMM swap with oracle integration
+    /// @notice Test AMM swap gated by a fresh oracle price check
     function test_ForkAMMSwapWithOracle() public {
-        // Arrange: Setup initial state
+        MockAggregatorV3 feed = new MockAggregatorV3(1_000e8);
+        vm.prank(deployer);
+        oracle.setPriceFeed(address(token0), address(feed));
+
+        int256 referencePrice = oracle.getPriceWithStalenessCheck(address(token0), 1 hours);
+        assertGt(referencePrice, 0, "oracle must return a fresh reference price");
+
         token0.mint(bob, 1_000 * 1e18);
-        
+
         vm.prank(bob);
         token0.approve(address(pool), 100 * 1e18);
 
-        // Act: Execute swap
         vm.prank(bob);
         uint256 amountOut = pool.swap(100 * 1e18, 0, address(token0), bob);
 
-        // Assert: Check swap executed
         assertGt(amountOut, 0, "Swap should output tokens");
-        assertEq(
-            token1.balanceOf(bob),
-            amountOut,
-            "Bob should receive tokens from swap"
-        );
+        assertEq(token1.balanceOf(bob), amountOut, "Bob should receive tokens from swap");
 
         console2.log("Swap successful - output:", amountOut);
+        console2.log("Oracle reference price:", referencePrice);
     }
 
     /// @notice Test oracle staleness prevention
     function test_ForkOracleStalenessPrevention() public {
-        // Arrange: Set a price feed (would need actual feed address on mainnet)
-        // For this test, we verify the error handling logic works
-        
-        // Act & Assert: Try to validate stale price
-        uint256 staleTimestamp = block.timestamp - 7200; // 2 hours old
+        uint256 staleTimestamp = block.timestamp - 7200;
         uint256 threshold = 1 hours;
-        // Custom error: encode with abi.encodeWithSelector from IOracle interface
-        vm.expectRevert(abi.encodeWithSelector(IOracle.PriceStale.selector, block.timestamp - staleTimestamp, threshold));
-        oracle.validatePriceFreshness(staleTimestamp, threshold);
 
-        console2.log("Staleness check correctly reverted for old price");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracle.PriceStale.selector, block.timestamp - staleTimestamp, threshold
+            )
+        );
+        oracle.validatePriceFreshness(staleTimestamp, threshold);
     }
 
     /// @notice Test oracle validates fresh prices
