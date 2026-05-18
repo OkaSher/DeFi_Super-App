@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
+
 
 /// @title  IAMM — Interface for the constant-product AMM pool
 interface IAMM {
