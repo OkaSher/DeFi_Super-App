@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-
 import {IAMMFactory} from "../interfaces/IAMMFactory.sol";
 import {AMM} from "./AMM.sol";
-
 
 contract AMMFactory is IAMMFactory {
     /// @inheritdoc IAMMFactory
@@ -25,21 +23,17 @@ contract AMMFactory is IAMMFactory {
 
     /// @inheritdoc IAMMFactory
     /// @dev    Normalises token order before salt generation.
-    function createPool(
-        address tokenA,
-        address tokenB
-    ) external override returns (address pool) {
+    function createPool(address tokenA, address tokenB) external override returns (address pool) {
         // CHECKS
         if (tokenA == tokenB) revert IdenticalAddresses();
         if (tokenA == address(0)) revert ZeroAddress();
 
         // Normalise order: token0 is always the lower address.
-        (address token0, address token1) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
 
-        if (getPool[token0][token1] != address(0))
+        if (getPool[token0][token1] != address(0)) {
             revert PoolAlreadyExists(getPool[token0][token1]);
+        }
 
         // EFFECTS + INTERACTIONS (deploy)
         // forge-lint: disable-next-line(asm-keccak256)
@@ -61,33 +55,44 @@ contract AMMFactory is IAMMFactory {
     }
 
     /// @inheritdoc IAMMFactory
+    /// @dev    Implements standard CREATE deployment model.
+    function createPoolClassic(address tokenA, address tokenB) external override returns (address pool) {
+        // CHECKS
+        if (tokenA == tokenB) revert IdenticalAddresses();
+        if (tokenA == address(0)) revert ZeroAddress();
+
+        // Normalise order: token0 is always the lower address.
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+
+        if (getPool[token0][token1] != address(0)) {
+            revert PoolAlreadyExists(getPool[token0][token1]);
+        }
+
+        // Deploy using standard CREATE
+        pool = address(new AMM());
+
+        // Initialize immediately — protected against double-call by _initialized flag.
+        AMM(pool).initialize(token0, token1);
+
+        // Store bilaterally so callers don't need to sort before calling getPool.
+        getPool[token0][token1] = pool;
+        getPool[token1][token0] = pool;
+
+        _allPools.push(pool);
+
+        emit PoolCreated(token0, token1, pool, _allPools.length);
+    }
+
+    /// @inheritdoc IAMMFactory
     /// @dev    Implements the standard CREATE2 address prediction formula.
-    function computePoolAddress(
-        address tokenA,
-        address tokenB
-    ) external view override returns (address pool) {
-        (address token0, address token1) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
+    function computePoolAddress(address tokenA, address tokenB) external view override returns (address pool) {
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
 
         // forge-lint: disable-next-line(asm-keccak256)
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         // forge-lint: disable-next-line(asm-keccak256)
         bytes32 initCodeHash = keccak256(type(AMM).creationCode);
 
-        pool = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            salt,
-                            initCodeHash
-                        )
-                    )
-                )
-            )
-        );
+        pool = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initCodeHash)))));
     }
 }

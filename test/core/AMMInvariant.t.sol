@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-
 import {Test} from "forge-std/Test.sol";
 import {AMM} from "../../src/core/AMM.sol";
 import {AMMFactory} from "../../src/core/AMMFactory.sol";
@@ -90,12 +89,12 @@ contract AMMInvariantTest is Test {
     function invariant_constantProduct() public view {
         (uint256 r0, uint256 r1) = pool.getReserves();
         uint256 supply = pool.totalSupply();
-        
+
         // Calculate pool value ratio: (r0 * r1 * 1e18) / supply^2
         // Initial ratio is 1e18. Fees from swaps increase this over time.
         // Liquidity actions keep it exactly constant.
         uint256 currentKPerShare = (r0 * r1 * 1e18) / (supply * supply);
-        
+
         // Assert it never falls below the initial scale (with 1000 wei allowance for rounding precision)
         assertGe(currentKPerShare, 1e18 - 1000, "K per share decreased!");
     }

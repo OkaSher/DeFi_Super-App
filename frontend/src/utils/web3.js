@@ -30,6 +30,18 @@ export const FACTORY_ABI = [
 
 export const GOV_TOKEN_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 export const GOVERNER_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+export const VAULT_ADDRESS = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
+
+export const VAULT_ABI = [
+    "function asset() external view returns (address)",
+    "function totalAssets() external view returns (uint256)",
+    "function convertToShares(uint256 assets) external view returns (uint256)",
+    "function convertToAssets(uint256 shares) external view returns (uint256)",
+    "function deposit(uint256 assets, address receiver) external returns (uint256 shares)",
+    "function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)",
+    "function balanceOf(address account) external view returns (uint256)",
+    "function totalSupply() external view returns (uint256)"
+];
 
 export const GOV_TOKEN_ABI = [
     "function balanceOf(address account) external view returns (uint256)",

@@ -28,8 +28,13 @@ contract VerifyDeploymentScript is Script {
         address badgeAddr = vm.envOr("GOV_BADGE", address(0));
         address deployerAddr = vm.envOr("DEPLOYER", address(0));
 
-        if (govTokenAddr == address(0) || timelockAddr == address(0) || governorAddr == address(0) || badgeAddr == address(0)) {
-            console2.log("[!] WARNING: Contract environment variables not set. Running verification with template checks.");
+        if (
+            govTokenAddr == address(0) || timelockAddr == address(0) || governorAddr == address(0)
+                || badgeAddr == address(0)
+        ) {
+            console2.log(
+                "[!] WARNING: Contract environment variables not set. Running verification with template checks."
+            );
             return;
         }
 
@@ -73,7 +78,7 @@ contract VerifyDeploymentScript is Script {
         console2.log("[+] Checking Governor roles in the Timelock...");
         bytes32 proposerRole = timelock.PROPOSER_ROLE();
         bytes32 cancellerRole = timelock.CANCELLER_ROLE();
-        
+
         if (!timelock.hasRole(proposerRole, address(governor))) {
             revert StateVerificationFailed("Governor does not have Proposer role in Timelock");
         }
@@ -85,7 +90,7 @@ contract VerifyDeploymentScript is Script {
         // 5. Audit Admin Backdoors (Renouncement Validation)
         console2.log("[+] Auditing admin backdoors...");
         bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
-        
+
         if (deployerAddr != address(0)) {
             if (timelock.hasRole(adminRole, deployerAddr)) {
                 revert StateVerificationFailed("SECURITY BREACH: Deployer still holds administrative role in Timelock!");

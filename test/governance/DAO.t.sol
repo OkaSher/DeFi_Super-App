@@ -49,13 +49,8 @@ contract DAOTest is Test {
         address[] memory executors = new address[](0);
         timelock = new ProtocolTimelock(MIN_DELAY, proposers, executors, address(this));
 
-        governor = new ProtocolGovernor(
-            IVotes(address(govToken)),
-            timelock,
-            VOTING_DELAY,
-            VOTING_PERIOD,
-            PROPOSAL_THRESHOLD
-        );
+        governor =
+            new ProtocolGovernor(IVotes(address(govToken)), timelock, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD);
 
         bytes32 proposerRole = timelock.PROPOSER_ROLE();
         bytes32 cancellerRole = timelock.CANCELLER_ROLE();
@@ -190,16 +185,12 @@ contract DAOTest is Test {
         calldatas[0] = "";
 
         vm.prank(proposerUser);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorInvalidProposalLength.selector, 2, 1, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorInvalidProposalLength.selector, 2, 1, 1));
         governor.propose(targets, values, calldatas, "Mismatched lengths");
     }
 
     function test_StateNonExistentReverts() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorNonexistentProposal.selector, 999999)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorNonexistentProposal.selector, 999999));
         governor.state(999999);
     }
 
@@ -231,9 +222,7 @@ contract DAOTest is Test {
 
     function test_RevertVoteNonExistentProposal() public {
         vm.prank(voter1);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorNonexistentProposal.selector, 999999)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorNonexistentProposal.selector, 999999));
         governor.castVote(999999, 1);
     }
 
@@ -255,9 +244,7 @@ contract DAOTest is Test {
 
         // Vote again should revert
         vm.prank(voter1);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorAlreadyCastVote.selector, voter1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorAlreadyCastVote.selector, voter1));
         governor.castVote(proposalId, 1);
     }
 
@@ -329,9 +316,7 @@ contract DAOTest is Test {
         vm.roll(block.number + VOTING_DELAY + 1);
 
         vm.prank(voter1);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorInvalidVoteType.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorInvalidVoteType.selector));
         governor.castVote(proposalId, 3); // 3 is not active in standard vote (only For=1, Against=0, Abstain=2)
     }
 
@@ -375,7 +360,7 @@ contract DAOTest is Test {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         bytes32 descriptionHash = keccak256(bytes("Defeated Proposal 2"));
-        
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 GovernorUnexpectedProposalState.selector,
@@ -504,7 +489,7 @@ contract DAOTest is Test {
 
         // Cancel it when Pending
         bytes32 descriptionHash = keccak256(bytes(desc));
-        
+
         vm.prank(proposerUser);
         governor.cancel(targets, values, calldatas, descriptionHash);
 
@@ -528,9 +513,7 @@ contract DAOTest is Test {
 
         // Stranger tries to cancel proposal
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorUnableToCancel.selector, proposalId, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorUnableToCancel.selector, proposalId, stranger));
         governor.cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -563,9 +546,7 @@ contract DAOTest is Test {
 
         // Cancel should revert since it's already executed
         vm.prank(proposerUser);
-        vm.expectRevert(
-            abi.encodeWithSelector(GovernorUnableToCancel.selector, proposalId, proposerUser)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GovernorUnableToCancel.selector, proposalId, proposerUser));
         governor.cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -575,9 +556,7 @@ contract DAOTest is Test {
 
     function test_TimelockRevertUpdateDelayUnauthorized() public {
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(TimelockUnauthorizedCaller.selector, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(TimelockUnauthorizedCaller.selector, stranger));
         timelock.updateDelay(1 days);
     }
 
@@ -622,7 +601,9 @@ contract DAOTest is Test {
         if (amount < PROPOSAL_THRESHOLD) {
             vm.prank(thresholdTester);
             vm.expectRevert(
-                abi.encodeWithSelector(GovernorInsufficientProposerVotes.selector, thresholdTester, amount, PROPOSAL_THRESHOLD)
+                abi.encodeWithSelector(
+                    GovernorInsufficientProposerVotes.selector, thresholdTester, amount, PROPOSAL_THRESHOLD
+                )
             );
             governor.propose(targets, values, calldatas, "Threshold fuzzed proposal");
         } else {

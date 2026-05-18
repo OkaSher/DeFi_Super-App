@@ -29,8 +29,8 @@ contract DeployScript is Script {
         ProtocolGovernor governor = new ProtocolGovernor(
             IVotes(address(govToken)),
             timelock,
-            7200,      // ~1 day delay
-            50400,     // ~7 days period
+            7200, // ~1 day delay
+            50400, // ~7 days period
             10_000 * 1e18 // 10k threshold
         );
 

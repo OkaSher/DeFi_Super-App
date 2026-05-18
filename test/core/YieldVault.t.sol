@@ -94,11 +94,11 @@ contract YieldVaultTest is Test {
 
         // Alice's shares must be greater than 0
         assertTrue(aliceShares > 0, "Alice must receive non-zero shares");
-        
+
         // Check conversion and share ratios
         vm.prank(alice);
         uint256 aliceAssetsRedeemed = vault.redeem(aliceShares, alice, alice);
-        
+
         // Alice should get almost all of her 5000 * 1e18 assets back.
         // Assert that Alice got at least 99.999% of her deposit back.
         assertApproxEqAbs(aliceAssetsRedeemed, 5_000 * 1e18, 1e13);
@@ -189,9 +189,7 @@ contract YieldVaultTest is Test {
         uint256 overLimit = max + 1;
 
         vm.startPrank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC4626ExceededMaxWithdraw.selector, alice, overLimit, max)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC4626ExceededMaxWithdraw.selector, alice, overLimit, max));
         vault.withdraw(overLimit, alice, alice);
         vm.stopPrank();
     }
@@ -205,9 +203,7 @@ contract YieldVaultTest is Test {
         uint256 overLimit = max + 1;
 
         vm.startPrank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC4626ExceededMaxRedeem.selector, alice, overLimit, max)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC4626ExceededMaxRedeem.selector, alice, overLimit, max));
         vault.redeem(overLimit, alice, alice);
         vm.stopPrank();
     }
@@ -218,9 +214,7 @@ contract YieldVaultTest is Test {
         uint256 shares = vault.deposit(depositAmount, alice);
 
         vm.startPrank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC20InsufficientBalance.selector, alice, shares, shares + 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20InsufficientBalance.selector, alice, shares, shares + 1));
         vault.transfer(bob, shares + 1);
         vm.stopPrank();
     }
@@ -232,20 +226,18 @@ contract YieldVaultTest is Test {
 
         // Bob tries to transfer alice's shares without approval
         vm.startPrank(bob);
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC20InsufficientAllowance.selector, bob, 0, shares)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20InsufficientAllowance.selector, bob, 0, shares));
         vault.transferFrom(alice, bob, shares);
         vm.stopPrank();
     }
 
     function test_DepositAndRedeemAll() public {
         uint256 amount = 10_000 * 1e18;
-        
+
         vm.startPrank(alice);
         uint256 shares = vault.deposit(amount, alice);
         assertEq(vault.balanceOf(alice), shares);
-        
+
         vault.redeem(shares, alice, alice);
         assertEq(vault.balanceOf(alice), 0);
         vm.stopPrank();

@@ -11,7 +11,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract GovernanceBadge is ERC721, Ownable {
     uint256 private _nextTokenId;
-    
+
     address public governor;
     address public timelock;
 
@@ -28,10 +28,7 @@ contract GovernanceBadge is ERC721, Ownable {
         _;
     }
 
-    constructor(address _governor, address _timelock) 
-        ERC721("Governance Badge", "GBADGE") 
-        Ownable(msg.sender)
-    {
+    constructor(address _governor, address _timelock) ERC721("Governance Badge", "GBADGE") Ownable(msg.sender) {
         if (_governor == address(0) || _timelock == address(0)) {
             revert InvalidAddress();
         }
