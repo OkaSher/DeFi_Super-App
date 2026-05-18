@@ -28,6 +28,26 @@ export const FACTORY_ABI = [
     "function createPool(address tokenA, address tokenB) external returns (address pool)"
 ];
 
+export const GOV_TOKEN_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+export const GOVERNER_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+
+export const GOV_TOKEN_ABI = [
+    "function balanceOf(address account) external view returns (uint256)",
+    "function delegate(address delegatee) external",
+    "function delegates(address account) external view returns (address)",
+    "function getVotes(address account) external view returns (uint256)",
+    "function approve(address spender, uint256 amount) external returns (bool)"
+];
+
+export const GOVERNOR_ABI = [
+    "function propose(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, string memory description) external returns (uint256)",
+    "function castVote(uint256 proposalId, uint8 support) external returns (uint256)",
+    "function state(uint256 proposalId) external view returns (uint8)",
+    "function proposalThreshold() external view returns (uint256)",
+    "function quorum(uint256 timepoint) external view returns (uint256)",
+    "function countMembers() external view returns (uint256)"
+];
+
 export async function connectWallet() {
     if (!window.ethereum) throw new Error("MetaMask is not installed!");
     const provider = new BrowserProvider(window.ethereum);
@@ -45,3 +65,4 @@ export function parseError(err) {
     if (str.includes("user rejected action")) return "Transaction rejected by user.";
     return "Unknown transaction error. See console.";
 }
+

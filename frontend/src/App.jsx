@@ -3,6 +3,7 @@ import { connectWallet } from './utils/web3'
 import Swap from './components/Swap'
 import AddLiquidity from './components/AddLiquidity'
 import RemoveLiquidity from './components/RemoveLiquidity'
+import DAO from './components/DAO'
 
 function App() {
     const [tab, setTab] = useState('SWAP');
@@ -37,12 +38,14 @@ function App() {
                         <span className={`nav-item ${tab === 'SWAP' ? 'active' : ''}`} onClick={() => setTab('SWAP')}>/ SWAP_PROTOCOL</span>
                         <span className={`nav-item ${tab === 'ADD' ? 'active' : ''}`} onClick={() => setTab('ADD')}>/ INJECT_LIQUIDITY</span>
                         <span className={`nav-item ${tab === 'REMOVE' ? 'active' : ''}`} onClick={() => setTab('REMOVE')}>/ EXTRACT_LIQUIDITY</span>
+                        <span className={`nav-item ${tab === 'DAO' ? 'active' : ''}`} onClick={() => setTab('DAO')}>/ DAO_PORTAL</span>
                     </div>
 
                     <div style={{ maxWidth: '600px' }}>
                         {tab === 'SWAP' && <Swap provider={provider} account={account} />}
                         {tab === 'ADD' && <AddLiquidity provider={provider} account={account} />}
                         {tab === 'REMOVE' && <RemoveLiquidity provider={provider} account={account} />}
+                        {tab === 'DAO' && <DAO provider={provider} account={account} />}
                     </div>
                 </>
             )}
@@ -51,3 +54,4 @@ function App() {
 }
 
 export default App
+
