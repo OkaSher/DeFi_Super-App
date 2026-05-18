@@ -136,30 +136,30 @@ contract DAOTest is Test {
 
     /* ==================== EXPANDED UNIT TESTS ==================== */
 
-    function test_Initialization() public view {
+    function test_Initialization() public {
         assertEq(governor.name(), "ProtocolGovernor");
         assertEq(address(governor.token()), address(govToken));
         assertEq(address(governor.timelock()), address(timelock));
     }
 
-    function test_VotingDelay() public view {
+    function test_VotingDelay() public {
         assertEq(governor.votingDelay(), VOTING_DELAY);
     }
 
-    function test_VotingPeriod() public view {
+    function test_VotingPeriod() public {
         assertEq(governor.votingPeriod(), VOTING_PERIOD);
     }
 
-    function test_ProposalThreshold() public view {
+    function test_ProposalThreshold() public {
         assertEq(governor.proposalThreshold(), PROPOSAL_THRESHOLD);
     }
 
-    function test_Quorum() public view {
+    function test_Quorum() public {
         // Quorum fraction is 4%. Initial supply is 1_000_000 * 1e18. Quorum = 40,000 * 1e18.
         assertEq(governor.quorum(block.number - 1), 40_000 * 1e18);
     }
 
-    function test_SupportsInterface() public view {
+    function test_SupportsInterface() public {
         // Standard ERC165 checks for governor interface
         assertTrue(governor.supportsInterface(type(IGovernor).interfaceId));
     }
@@ -483,7 +483,7 @@ contract DAOTest is Test {
                 GovernorUnexpectedProposalState.selector,
                 proposalId,
                 IGovernor.ProposalState.Executed,
-                bytes32(1 << uint8(IGovernor.ProposalState.Queued))
+                bytes32((uint256(1) << uint8(IGovernor.ProposalState.Succeeded)) | (uint256(1) << uint8(IGovernor.ProposalState.Queued)))
             )
         );
         governor.execute(targets, values, calldatas, descriptionHash);
@@ -569,7 +569,7 @@ contract DAOTest is Test {
         governor.cancel(targets, values, calldatas, descriptionHash);
     }
 
-    function test_TimelockViews() public view {
+    function test_TimelockViews() public {
         assertEq(timelock.getMinDelay(), MIN_DELAY);
     }
 
