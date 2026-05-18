@@ -1,0 +1,139 @@
+:root {
+  --bg-color: #0e0e0e;
+  --text-color: #00f0ff;
+  --accent-primary: #ff003c;
+  --accent-secondary: #00f0ff;
+  --warning: #fce205;
+  --border-color: #ff003c;
+  --surface: #1a1a1a;
+  
+  --scanline-color: rgba(0, 240, 255, 0.05);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Fira Code', monospace;
+  overflow-x: hidden;
+  background-image: 
+    linear-gradient(var(--scanline-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--scanline-color) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* CRT Screen Effect */
+.crtscreen::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+h1, h2, h3 {
+  font-family: 'VT323', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 5px var(--accent-secondary);
+}
+
+.glitch-text {
+  animation: glitch 1s linear infinite;
+}
+
+@keyframes glitch {
+  2%, 64% { transform: translate(2px,0) skew(0deg); }
+  4%, 60% { transform: translate(-2px,0) skew(0deg); }
+  62% { transform: translate(0,0) skew(5deg); }
+}
+
+.cyber-card {
+  background: var(--surface);
+  border: 2px solid var(--border-color);
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(255, 0, 60, 0.2);
+}
+
+.cyber-card::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  border-top: 10px solid var(--bg-color);
+  border-left: 10px solid var(--border-color);
+  width: 0;
+}
+
+.cyber-button {
+  background: transparent;
+  color: var(--accent-primary);
+  border: 2px solid var(--accent-primary);
+  padding: 10px 20px;
+  font-family: 'VT323', monospace;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 5px rgba(255, 0, 60, 0.3);
+}
+
+.cyber-button:hover {
+  background: var(--accent-primary);
+  color: var(--bg-color);
+  box-shadow: 0 0 15px var(--accent-primary);
+}
+
+.cyber-button:disabled {
+  border-color: #555;
+  color: #555;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.cyber-input {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--accent-secondary);
+  color: var(--text-color);
+  padding: 10px;
+  font-family: 'Fira Code', monospace;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 15px;
+}
+
+.cyber-input:focus {
+  outline: none;
+  box-shadow: 0 0 8px var(--accent-secondary);
+}
+
+.cyber-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.nav-item {
+  color: #888;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 1.5rem;
+}
+
+.nav-item.active {
+  color: var(--text-color);
+  text-shadow: 0 0 5px var(--text-color);
+}
