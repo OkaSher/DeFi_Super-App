@@ -93,7 +93,7 @@ contract AMM is IAMM, ERC20, ReentrancyGuard {
             amount0 = amount0Desired;
             amount1 = amount1Desired;
             shares = _sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
-            _mint(address(0), MINIMUM_LIQUIDITY);
+            _mint(address(0xdead), MINIMUM_LIQUIDITY);
         } else {
             uint256 amount1Optimal = (amount0Desired * _reserve1) / _reserve0;
             if (amount1Optimal <= amount1Desired) {
@@ -214,15 +214,9 @@ contract AMM is IAMM, ERC20, ReentrancyGuard {
         uint256 balance0 = isToken0 ? rIn + actualAmountIn : rOut - amountOut;
         uint256 balance1 = isToken0 ? rOut - amountOut : rIn + actualAmountIn;
 
-        assembly {
-            let res0 := sload(reserve0.slot)
-            let r0 := and(
-                res0,
-                0x0000000000000000000000000000000000000000000000000000ffffffffffff
-            )
-            let r1 := shr(112, res0)
-            let kBefore := mul(r0, r1)
+        uint256 kBefore = rIn * rOut;
 
+        assembly {
             let adj0 := mul(balance0, 1000)
             let adj1 := mul(balance1, 1000)
 
