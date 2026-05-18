@@ -20,19 +20,31 @@ contract AMM is IAMM, ERC20, ReentrancyGuard {
     /// @notice 1 000 LP wei permanently burned on the first deposit.
     uint256 private constant MINIMUM_LIQUIDITY = 1_000;
 
-    address public immutable override token0;
-    address public immutable override token1;
+    address public factory;
+    address public override token0;
+    address public override token1;
 
     // Slot-packed: two uint112s share one 32-byte storage slot.
     uint112 private reserve0;
     uint112 private reserve1;
 
-    constructor(address _token0, address _token1) ERC20("AMM LP Token", "ALP") {
-        if (_token0 == address(0) || _token1 == address(0))
-            revert ZeroAddress();
+    bool private _initialized;
+
+    constructor() ERC20("AMM LP Token", "ALP") {}
+
+    /// @dev One-time initialization post-CREATE2 deployment.
+    function initialize(address _token0, address _token1) external {
+        if (_initialized) revert AlreadyInitialized();
+        if (msg.sender != factory && factory != address(0))
+            revert Unauthorized();
+        if (_token0 == _token1) revert IdenticalAddresses();
+        if (_token0 == address(0)) revert ZeroAddress();
         if (_token0 >= _token1) revert InvalidTokenOrder();
+
         token0 = _token0;
         token1 = _token1;
+        factory = msg.sender;
+        _initialized = true;
     }
 
     /// @inheritdoc IAMM
@@ -99,14 +111,12 @@ contract AMM is IAMM, ERC20, ReentrancyGuard {
 
         if (shares == 0) revert ZeroAmount();
 
-        // Check for uint112 overflow before updating
         uint256 newReserve0 = _reserve0 + amount0;
         uint256 newReserve1 = _reserve1 + amount1;
         if (newReserve0 > type(uint112).max || newReserve1 > type(uint112).max)
             revert Overflow();
 
         _mint(to, shares);
-        // Safe: explicit overflow check on lines above guarantees newReserve fits uint112.
         // forge-lint: disable-next-line(unsafe-typecast)
         _update(uint112(newReserve0), uint112(newReserve1));
 
