@@ -1,8 +1,8 @@
-import { BrowserProvider, Contract, parseUnits } from 'ethers';
+import { BrowserProvider, Contract, parseUnits, JsonRpcProvider } from 'ethers';
 
 // For local testing, ensure these addresses match your anvil deployment,
 // or Arbitrum Sepolia if testing on testnet.
-export const FACTORY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+export const FACTORY_ADDRESS = "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707";
 export const AMM_ABI = [
     "function getReserves() external view returns (uint256 reserve0, uint256 reserve1)",
     "function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) external pure returns (uint256 amountOut)",
@@ -28,7 +28,7 @@ export const FACTORY_ABI = [
     "function createPool(address tokenA, address tokenB) external returns (address pool)"
 ];
 
-export const GOV_TOKEN_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+export const GOV_TOKEN_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 export const GOVERNER_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
 export const VAULT_ADDRESS = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
 
@@ -61,10 +61,16 @@ export const GOVERNOR_ABI = [
 ];
 
 export async function connectWallet() {
-    if (!window.ethereum) throw new Error("MetaMask is not installed!");
-    const provider = new BrowserProvider(window.ethereum);
-    const accounts = await provider.send("eth_requestAccounts", []);
-    return { provider, account: accounts[0] };
+    if (window.ethereum) {
+        const provider = new BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        return { provider, account: accounts[0] };
+    } else {
+        console.warn("MetaMask not detected, falling back to local Anvil node...");
+        const provider = new JsonRpcProvider("http://127.0.0.1:8545");
+        const account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+        return { provider, account };
+    }
 }
 
 export function parseError(err) {
