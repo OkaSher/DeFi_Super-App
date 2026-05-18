@@ -1,0 +1,38 @@
+type User @entity {
+  id: ID!
+  governanceTokenBalance: BigInt!
+  votes: [Vote!]! @derivedFrom(field: "voter")
+  proposals: [Proposal!]! @derivedFrom(field: "proposer")
+}
+
+type PoolSwap @entity {
+  id: ID!
+  swapper: Bytes!
+  tokenIn: Bytes!
+  tokenOut: Bytes!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Proposal @entity {
+  id: ID!
+  description: String!
+  proposer: User!
+  startBlock: BigInt!
+  endBlock: BigInt!
+  forVotes: BigInt!
+  againstVotes: BigInt!
+  abstainVotes: BigInt!
+  state: String!
+  votes: [Vote!]! @derivedFrom(field: "proposal")
+}
+
+type Vote @entity {
+  id: ID!
+  voter: User!
+  proposal: Proposal!
+  weight: BigInt!
+  support: String!
+}
