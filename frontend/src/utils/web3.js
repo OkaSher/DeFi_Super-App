@@ -2,7 +2,7 @@ import { BrowserProvider, Contract, parseUnits } from 'ethers';
 
 // For local testing, ensure these addresses match your anvil deployment,
 // or Arbitrum Sepolia if testing on testnet.
-export const FACTORY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+export const FACTORY_ADDRESS = "0xFE1b72aB29a831831e4E4c1cE855214720c0e9E5";
 export const AMM_ABI = [
     "function getReserves() external view returns (uint256 reserve0, uint256 reserve1)",
     "function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) external pure returns (uint256 amountOut)",
@@ -28,8 +28,9 @@ export const FACTORY_ABI = [
     "function createPool(address tokenA, address tokenB) external returns (address pool)"
 ];
 
-export const GOV_TOKEN_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-export const GOVERNER_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+export const GOV_TOKEN_ADDRESS = "0x2b968A9276f08270c1d4bAE6B0eE01Dd89679682";
+export const TEST_TOKEN_ADDRESS = "0xbdEf1F4589a87095ac77edACCB4FE6dA551FacCf";
+export const GOVERNOR_ADDRESS = "0x3559d29Ea49bC09140f8e4634865722d7084F3b2";
 
 export const GOV_TOKEN_ABI = [
     "function balanceOf(address account) external view returns (uint256)",

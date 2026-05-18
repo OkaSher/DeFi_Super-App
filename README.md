@@ -189,28 +189,33 @@ forge test --match-path "test/integration/Fork.t.sol" -v
 
 ### Deploy to Arbitrum Sepolia
 
-1. **Set environment variables:**
+1. **Create `.env` in project root:**
 ```bash
-export ARBITRUM_SEPOLIA_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
-export PRIVATE_KEY=<your_private_key>
-export ETHERSCAN_API_KEY=<arbitrumscan_key>  # For verification
+ARBITRUM_SEPOLIA_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
+PRIVATE_KEY=<your_private_key>
+ARBISCAN_API_KEY=<arbitrumscan_key>
 ```
 
-2. **Run deployment script:**
+2. **Load `.env` into current shell (optional):**
+```bash
+source .env
+```
+
+3. **Run deployment script:**
 ```bash
 forge script script/Deploy.s.sol:Deploy --rpc-url $ARBITRUM_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast
 ```
 
-3. **Verify deployment:**
+4. **Verify deployment:**
 ```bash
 forge script script/VerifyDeployment.s.sol:VerifyDeployment --rpc-url $ARBITRUM_SEPOLIA_RPC_URL
 ```
 
-4. **Verify contracts on Arbiscan:**
+5. **Verify contracts on Arbiscan:**
 ```bash
 forge verify-contract <CONTRACT_ADDRESS> src/core/AMM.sol:AMM \
   --chain-id 421614 \
-  --etherscan-api-key $ETHERSCAN_API_KEY
+  --etherscan-api-key $ARBISCAN_API_KEY
 ```
 
 ### Deployment Addresses (Example - Testnet)
